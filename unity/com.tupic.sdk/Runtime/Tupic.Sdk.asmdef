@@ -1,0 +1,10 @@
+{
+  "name": "Tupic.Sdk",
+  "rootNamespace": "Tupic",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true,
+  "noEngineReferences": false
+}

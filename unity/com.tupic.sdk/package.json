@@ -1,0 +1,9 @@
+{
+  "name": "com.tupic.sdk",
+  "version": "0.1.0",
+  "displayName": "Tupic SDK",
+  "description": "Tupic platform SDK: Keycloak sign-in, scores and analytics, Insights (region, calendar, themes), Chain (read-only), Live (web bridge), Assets, text-stored 3D models (glTF), and a WebGL build that runs on Tupic Games.",
+  "unity": "6000.3",
+  "author": { "name": "Tupic" },
+  "keywords": ["tupic", "games", "sdk"]
+}

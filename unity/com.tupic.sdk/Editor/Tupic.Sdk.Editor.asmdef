@@ -1,0 +1,8 @@
+{
+  "name": "Tupic.Sdk.Editor",
+  "rootNamespace": "Tupic.Editor",
+  "references": ["Tupic.Sdk"],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "autoReferenced": true
+}
