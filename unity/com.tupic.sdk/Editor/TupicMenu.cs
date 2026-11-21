@@ -73,6 +73,26 @@ namespace Tupic.Editor
             return AssetDatabase.LoadAssetAtPath<TextAsset>(asset);
         }
 
+        /// <summary>Shaders the runtime creates materials from by name must be in the build (Always Included Shaders).</summary>
+        static void AlwaysInclude(params string[] names)
+        {
+            var gs = AssetDatabase.LoadAssetAtPath<UnityEngine.Rendering.GraphicsSettings>("ProjectSettings/GraphicsSettings.asset");
+            var so = new SerializedObject(gs);
+            var list = so.FindProperty("m_AlwaysIncludedShaders");
+            foreach (var n in names)
+            {
+                var sh = Shader.Find(n);
+                if (sh == null) continue;
+                var found = false;
+                for (var i = 0; i < list.arraySize; i++) if (list.GetArrayElementAtIndex(i).objectReferenceValue == sh) found = true;
+                if (found) continue;
+                list.InsertArrayElementAtIndex(list.arraySize);
+                list.GetArrayElementAtIndex(list.arraySize - 1).objectReferenceValue = sh;
+            }
+            so.ApplyModifiedProperties();
+            AssetDatabase.SaveAssets();
+        }
+
         [MenuItem("Tupic/Build WebGL for Tupic")]
         public static void BuildMenu()
         {
@@ -83,6 +103,7 @@ namespace Tupic.Editor
         /// <summary>WebGL build (compression Disabled) + tupic-unity.json, zipped to &lt;outDir&gt;/tupic-unity-webgl.zip.</summary>
         public static string BuildWebGL(string outDir)
         {
+            AlwaysInclude("Standard", "Unlit/Color");
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
             PlayerSettings.WebGL.decompressionFallback = false;
             PlayerSettings.companyName = "Tupic";

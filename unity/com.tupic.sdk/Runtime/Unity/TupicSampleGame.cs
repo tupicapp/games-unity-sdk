@@ -40,8 +40,14 @@ namespace Tupic.Unity
             var light = new GameObject("Light").AddComponent<Light>(); light.type = LightType.Directional; light.transform.rotation = Quaternion.Euler(40, -30, 0);
         }
 
-        static Material Mat(Color c) { var m = new Material(Shader.Find("Universal Render Pipeline/Lit") ?? Shader.Find("Standard") ?? Shader.Find("Unlit/Color")); m.color = c; return m; }
-        static GameObject Make(PrimitiveType t, Color c, float s) { var g = GameObject.CreatePrimitive(t); g.transform.localScale = Vector3.one * s; g.GetComponent<Renderer>().material = Mat(c); return g; }
+        static Material Mat(Color c) { var m = new Material(Shader.Find("Standard") ?? Shader.Find("Unlit/Color")); m.color = c; return m; } // both are Always Included by the Tupic build
+        // No colliders (CreatePrimitive adds one, and WebGL strips the physics module): a built-in mesh and a renderer.
+        static GameObject Make(PrimitiveType t, Color c, float s)
+        {
+            var g = new GameObject(t.ToString(), typeof(MeshFilter), typeof(MeshRenderer));
+            g.GetComponent<MeshFilter>().sharedMesh = Resources.GetBuiltinResource<Mesh>(t == PrimitiveType.Sphere ? "Sphere.fbx" : "Cube.fbx");
+            g.transform.localScale = Vector3.one * s; g.GetComponent<Renderer>().material = Mat(c); return g;
+        }
 
         void NewStar() { _star.position = new Vector3(Random.Range(-7f, 7f), Random.Range(-4f, 3.5f), 0); _star.gameObject.SetActive(true); }
 
