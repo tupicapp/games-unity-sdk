@@ -56,8 +56,8 @@ namespace Tupic.Core
             foreach (var h in spec.Headers) msg.Headers.TryAddWithoutValidation(h.Key, h.Value);
             try
             {
-                using var resp = await _client.SendAsync(msg, ct).ConfigureAwait(false);
-                var result = new HttpResult { Status = (int)resp.StatusCode, Body = await resp.Content.ReadAsByteArrayAsync().ConfigureAwait(false) };
+                using var resp = await _client.SendAsync(msg, ct);
+                var result = new HttpResult { Status = (int)resp.StatusCode, Body = await resp.Content.ReadAsByteArrayAsync() };
                 foreach (var h in resp.Headers) result.Headers[h.Key] = string.Join(",", h.Value);
                 foreach (var h in resp.Content.Headers) result.Headers[h.Key] = string.Join(",", h.Value);
                 return result;

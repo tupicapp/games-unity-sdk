@@ -80,7 +80,7 @@ namespace Tupic.Core
                 ["service"] = "games",
                 ["source_client"] = _env.ClientId,
                 ["file_size"] = bytes.LongLength,
-            }, ct).ConfigureAwait(false);
+            }, ct);
 
             var asset = created.Obj("asset") ?? created;
             var id = asset.Str("id") ?? throw new TupicApiException("Asset create returned no asset id", 0);
@@ -88,7 +88,7 @@ namespace Tupic.Core
             var put = await _http.SendAsync(new HttpRequestSpec
             {
                 Method = "PUT", Url = uploadUrl, Body = bytes, ContentType = created.Str("upload_content_type") ?? mimeType,
-            }, ct).ConfigureAwait(false);
+            }, ct);
             // The presigned URL is a credential: never let it reach a log or an exception message.
             if (!put.Ok) throw new TupicApiException($"Asset upload failed ({put.Status}) for asset {id}", put.Status);
             TupicLog.Info($"Tupic asset uploaded: {id} ({bytes.Length} bytes)");

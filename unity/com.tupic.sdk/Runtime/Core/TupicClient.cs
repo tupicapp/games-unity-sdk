@@ -54,8 +54,8 @@ namespace Tupic.Core
         public async Task<HttpResult> SendAsync(HttpRequestSpec spec, CancellationToken ct, bool optionalAuth = false)
         {
             if (!optionalAuth || _auth.IsSignedIn)
-                spec.Headers["Authorization"] = "Bearer " + await _auth.GetAccessTokenAsync(ct).ConfigureAwait(false);
-            return await _http.SendAsync(spec, ct).ConfigureAwait(false);
+                spec.Headers["Authorization"] = "Bearer " + await _auth.GetAccessTokenAsync(ct);
+            return await _http.SendAsync(spec, ct);
         }
 
         public async Task<Dictionary<string, object>> JsonAsync(string what, string method, string url, object body, CancellationToken ct,
@@ -67,7 +67,7 @@ namespace Tupic.Core
                 spec.Body = Encoding.UTF8.GetBytes(Json.Serialize(body));
                 spec.ContentType = "application/json";
             }
-            var r = await SendAsync(spec, ct, optionalAuth).ConfigureAwait(false);
+            var r = await SendAsync(spec, ct, optionalAuth);
             if (notFoundIsNull && r.Status == 404) return null;
             if (!r.Ok) throw TupicApiException.From(what, r);
             return ParseOrEmpty(what, r);

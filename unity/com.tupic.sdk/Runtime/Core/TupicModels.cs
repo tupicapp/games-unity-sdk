@@ -91,7 +91,7 @@ namespace Tupic.Core
                 ["source_sha256"] = TupicAssets.Sha256Hex(sourceBytes),
                 ["source_file"] = Path.GetFileName(fileName ?? ""),
             };
-            var r = await _api.JsonAsync("Model upload", "POST", Root, body, ct).ConfigureAwait(false);
+            var r = await _api.JsonAsync("Model upload", "POST", Root, body, ct);
             var info = ModelInfo.FromDictionary(r.Obj("model")) ?? throw new TupicApiException("Model upload returned no model", 0);
             TupicLog.Info($"Tupic model stored: {info.Id} ({info.TriangleCount} triangles)");
             return info;
@@ -99,7 +99,7 @@ namespace Tupic.Core
 
         public async Task<List<ModelInfo>> ListAsync(CancellationToken ct = default)
         {
-            var r = await _api.JsonAsync("Model list", "GET", Root, null, ct).ConfigureAwait(false);
+            var r = await _api.JsonAsync("Model list", "GET", Root, null, ct);
             var list = new List<ModelInfo>();
             foreach (var m in r.Arr("models") ?? new List<object>())
                 if (m is Dictionary<string, object> o) list.Add(ModelInfo.FromDictionary(o));
@@ -108,7 +108,7 @@ namespace Tupic.Core
 
         public async Task<ModelDocument> GetAsync(string modelId, CancellationToken ct = default)
         {
-            var r = await _api.JsonAsync("Model get", "GET", Root + "/" + TupicApi.Segment(modelId, nameof(modelId)), null, ct).ConfigureAwait(false);
+            var r = await _api.JsonAsync("Model get", "GET", Root + "/" + TupicApi.Segment(modelId, nameof(modelId)), null, ct);
             var m = r.Obj("model") ?? throw new TupicApiException("Model get returned no model", 0);
             var gltf = m.Obj("gltf") ?? throw new TupicApiException("Model get returned no glTF document", 0);
             return new ModelDocument { Info = ModelInfo.FromDictionary(m), GltfJson = Json.Serialize(gltf) };
@@ -116,7 +116,7 @@ namespace Tupic.Core
 
         /// <summary>The model's glTF 2.0 JSON text, ready for the engine's importer.</summary>
         public async Task<string> LoadAsync(string modelId, CancellationToken ct = default) =>
-            (await GetAsync(modelId, ct).ConfigureAwait(false)).GltfJson;
+            (await GetAsync(modelId, ct)).GltfJson;
 
         public Task DeleteAsync(string modelId, CancellationToken ct = default) =>
             _api.JsonAsync("Model delete", "DELETE", Root + "/" + TupicApi.Segment(modelId, nameof(modelId)), null, ct);

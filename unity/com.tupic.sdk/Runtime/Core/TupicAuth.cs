@@ -100,7 +100,7 @@ namespace Tupic.Core
                 ["code"] = code,
                 ["redirect_uri"] = request.RedirectUri,
                 ["code_verifier"] = request.CodeVerifier,
-            }, ct).ConfigureAwait(false);
+            }, ct);
         }
 
         /// <summary>Automated tests against the local stack only (Keycloak's local e2e client).</summary>
@@ -121,7 +121,7 @@ namespace Tupic.Core
         /// <summary>A valid access token: cached, refreshed RefreshMargin before expiry, one refresh for concurrent callers.</summary>
         public async Task<string> GetAccessTokenAsync(CancellationToken ct = default)
         {
-            await _lock.WaitAsync(ct).ConfigureAwait(false);
+            await _lock.WaitAsync(ct);
             try
             {
                 var t = _store.Load() ?? throw new InvalidOperationException("Not signed in to Tupic.");
@@ -134,7 +134,7 @@ namespace Tupic.Core
                     ["grant_type"] = "refresh_token",
                     ["client_id"] = _env.ClientId,
                     ["refresh_token"] = t.RefreshToken,
-                }, ct).ConfigureAwait(false);
+                }, ct);
                 return fresh.AccessToken;
             }
             finally { _lock.Release(); }
@@ -166,12 +166,12 @@ namespace Tupic.Core
         }
 
         public async Task<Dictionary<string, object>> CurrentClaimsAsync(CancellationToken ct = default) =>
-            ReadClaims(await GetAccessTokenAsync(ct).ConfigureAwait(false));
+            ReadClaims(await GetAccessTokenAsync(ct));
 
         async Task<TokenSet> TokenRequest(Dictionary<string, string> form, CancellationToken ct)
         {
-            await _lock.WaitAsync(ct).ConfigureAwait(false);
-            try { return await TokenRequestUnlocked(form, ct).ConfigureAwait(false); }
+            await _lock.WaitAsync(ct);
+            try { return await TokenRequestUnlocked(form, ct); }
             finally { _lock.Release(); }
         }
 
@@ -181,7 +181,7 @@ namespace Tupic.Core
             {
                 Method = "POST", Url = _env.TokenEndpoint, Body = Encoding.UTF8.GetBytes(FormEncode(form)),
                 ContentType = "application/x-www-form-urlencoded",
-            }, ct).ConfigureAwait(false);
+            }, ct);
             if (!r.Ok)
             {
                 string detail;

@@ -21,14 +21,14 @@ namespace Tupic.Core
         {
             if (string.IsNullOrWhiteSpace(mimeType)) throw new ArgumentException("mimeType is required.", nameof(mimeType));
             var setup = await _api.JsonAsync("Live setup", "POST", _env.GamesApi + "/tupiclive/streams/setup",
-                new Dictionary<string, object> { ["game_name"] = gameName ?? "TupicGame Stream", ["game_id"] = _gameId }, ct).ConfigureAwait(false);
+                new Dictionary<string, object> { ["game_name"] = gameName ?? "TupicGame Stream", ["game_id"] = _gameId }, ct);
             var channelId = setup.Str("channel_id") ?? throw new TupicApiException("Live setup returned no channel", 0);
             var streamKey = setup.Str("stream_key") ?? throw new TupicApiException("Live setup returned no stream key", 0);
             var rtmpUrl = setup.Str("rtmp_url");
             await _api.JsonAsync("Live relay start", "POST", _env.GamesApi + "/tupiclive/relay/start", new Dictionary<string, object>
             {
                 ["channel_id"] = channelId, ["rtmp_url"] = rtmpUrl, ["stream_key"] = streamKey, ["mime_type"] = mimeType,
-            }, ct).ConfigureAwait(false);
+            }, ct);
             TupicLog.Info($"Tupic Live: relay started on channel {channelId}");
             return new TupicLiveSession(_env, _api, channelId, setup.Str("stream_id"), mimeType);
         }
@@ -60,7 +60,7 @@ namespace Tupic.Core
                 Body = chunk, ContentType = "application/octet-stream",
             };
             spec.Headers["X-TupicLive-Mime-Type"] = MimeType;
-            var r = await _api.SendAsync(spec, ct).ConfigureAwait(false);
+            var r = await _api.SendAsync(spec, ct);
             if (r.Status == 409)
             {
                 IsActive = false;
@@ -74,13 +74,13 @@ namespace Tupic.Core
         /// <summary>Stops the relay. Safe to call more than once.</summary>
         public async Task StopAsync(CancellationToken ct = default)
         {
-            await _lock.WaitAsync(ct).ConfigureAwait(false);
+            await _lock.WaitAsync(ct);
             try
             {
                 if (!IsActive) return;
                 IsActive = false;
                 await _api.JsonAsync("Live relay stop", "POST", _env.GamesApi + "/tupiclive/relay/stop",
-                    new Dictionary<string, object> { ["channel_id"] = ChannelId }, ct).ConfigureAwait(false);
+                    new Dictionary<string, object> { ["channel_id"] = ChannelId }, ct);
                 TupicLog.Info($"Tupic Live: relay stopped on channel {ChannelId}");
             }
             finally { _lock.Release(); }
