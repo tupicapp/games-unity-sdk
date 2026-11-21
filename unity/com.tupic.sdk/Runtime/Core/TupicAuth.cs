@@ -126,7 +126,9 @@ namespace Tupic.Core
             {
                 var t = _store.Load() ?? throw new InvalidOperationException("Not signed in to Tupic.");
                 if (Clock() < t.ExpiresAt - RefreshMargin) return t.AccessToken;
-                if (string.IsNullOrEmpty(t.RefreshToken)) throw new InvalidOperationException("Session expired: sign in again.");
+                if (string.IsNullOrEmpty(t.RefreshToken))
+                    throw new InvalidOperationException(_hostToken ? "Token from the host page expired: ask the host for a new one."
+                                                                   : "Session expired: sign in again.");
                 var fresh = await TokenRequestUnlocked(new Dictionary<string, string>
                 {
                     ["grant_type"] = "refresh_token",
@@ -139,6 +141,19 @@ namespace Tupic.Core
         }
 
         public void SignOut() => _store.Clear();
+
+        bool _hostToken;
+
+        /// <summary>
+        /// A game hosted on Tupic (the play frame) gets its token from the host page, like a web game: no refresh token,
+        /// the host hands over a fresh one. Call again whenever the host sends one.
+        /// </summary>
+        public void UseHostToken(string accessToken, DateTimeOffset expiresAt)
+        {
+            if (string.IsNullOrEmpty(accessToken)) throw new ArgumentException("Host token is empty.", nameof(accessToken));
+            _hostToken = true;
+            _store.Save(new TokenSet { AccessToken = accessToken, ExpiresAt = expiresAt });
+        }
 
         /// <summary>The claims of a JWT (not verified: the services verify; the game only reads sub and names).</summary>
         public static Dictionary<string, object> ReadClaims(string jwt)

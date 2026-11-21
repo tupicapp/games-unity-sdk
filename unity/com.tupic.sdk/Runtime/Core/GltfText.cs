@@ -245,6 +245,76 @@ namespace Tupic.Core
             }
         }
 
+        /// <summary>Mesh arrays of a text model's first primitive (what an engine builds its mesh from).</summary>
+        public sealed class MeshData
+        {
+            public float[] Positions = Array.Empty<float>();
+            public float[] Normals;   // null when the model has none
+            public float[] Uvs;       // null when the model has none
+            public int[] Indices = Array.Empty<int>();
+        }
+
+        /// <summary>Decodes POSITION, NORMAL, TEXCOORD_0 and indices from the embedded data: buffers. Validates first.</summary>
+        public static MeshData Decode(string gltfJson)
+        {
+            Validate(gltfJson);
+            var doc = Json.ParseObject(gltfJson);
+            var buffers = new List<byte[]>();
+            foreach (var b in doc.Arr("buffers") ?? new List<object>())
+            {
+                var uri = (b as Dictionary<string, object>).Str("uri");
+                buffers.Add(Convert.FromBase64String(uri.Substring(uri.IndexOf(',') + 1)));
+            }
+            var views = doc.Arr("bufferViews") ?? new List<object>();
+            var accessors = doc.Arr("accessors") ?? new List<object>();
+            var prim = ((doc.Arr("meshes")?[0] as Dictionary<string, object>).Arr("primitives")?[0]) as Dictionary<string, object>
+                       ?? throw new ArgumentException("glTF has no mesh primitive.");
+            var attrs = prim.Obj("attributes") ?? throw new ArgumentException("glTF primitive has no attributes.");
+
+            float[] Floats(long index, int width)
+            {
+                var a = accessors[(int)index] as Dictionary<string, object>;
+                if (a.Long("componentType") != 5126) throw new ArgumentException("Only float vertex attributes are read.");
+                var v = views[(int)a.Long("bufferView")] as Dictionary<string, object>;
+                var buf = buffers[(int)v.Long("buffer")];
+                var off = (int)(v.Long("byteOffset") + a.Long("byteOffset"));
+                var stride = (int)v.Long("byteStride", 0);
+                if (stride == 0) stride = 4 * width;
+                var n = (int)a.Long("count");
+                var r = new float[n * width];
+                for (var i = 0; i < n; i++)
+                    for (var c = 0; c < width; c++)
+                        r[i * width + c] = BitConverter.ToSingle(buf, off + i * stride + c * 4);
+                return r;
+            }
+
+            var m = new MeshData { Positions = Floats(attrs.Long("POSITION", -1), 3) };
+            if (attrs.ContainsKey("NORMAL")) m.Normals = Floats(attrs.Long("NORMAL"), 3);
+            if (attrs.ContainsKey("TEXCOORD_0")) m.Uvs = Floats(attrs.Long("TEXCOORD_0"), 2);
+            if (prim.ContainsKey("indices") && prim["indices"] != null)
+            {
+                var a = accessors[(int)prim.Long("indices")] as Dictionary<string, object>;
+                var v = views[(int)a.Long("bufferView")] as Dictionary<string, object>;
+                var buf = buffers[(int)v.Long("buffer")];
+                var off = (int)(v.Long("byteOffset") + a.Long("byteOffset"));
+                var n = (int)a.Long("count");
+                var ct = a.Long("componentType");
+                m.Indices = new int[n];
+                for (var i = 0; i < n; i++)
+                    m.Indices[i] = ct == 5125 ? (int)BitConverter.ToUInt32(buf, off + i * 4)
+                                 : ct == 5123 ? BitConverter.ToUInt16(buf, off + i * 2)
+                                 : buf[off + i];
+            }
+            else
+            {
+                m.Indices = new int[m.Positions.Length / 3];
+                for (var i = 0; i < m.Indices.Length; i++) m.Indices[i] = i;
+            }
+            var vc = m.Positions.Length / 3;
+            foreach (var i in m.Indices) if (i < 0 || i >= vc) throw new ArgumentException("glTF index out of range.");
+            return m;
+        }
+
         static long AccessorCount(List<object> accessors, long index) =>
             index >= 0 && index < accessors.Count ? (accessors[(int)index] as Dictionary<string, object>).Long("count", 0) : 0;
 
