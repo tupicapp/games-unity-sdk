@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- The engine-agnostic core. Its sources live in the Unity package (Runtime/Core) so Unity and .NET compile the
+       very same files; this project only builds them as a .NET Standard 2.1 library for tests and other engines. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <RootNamespace>Tupic.Core</RootNamespace>
+    <AssemblyName>Tupic.Core</AssemblyName>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../../unity/com.tupic.sdk/Runtime/Core/**/*.cs" />
+  </ItemGroup>
+</Project>
