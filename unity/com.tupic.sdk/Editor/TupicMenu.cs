@@ -17,7 +17,7 @@ namespace Tupic.Editor
     {
         const string SamplePath = "Assets/Scenes/TupicSample.unity";
         const string ModelsDir = "Assets/Resources/TupicModels";
-        public const string SdkVersion = "0.1.0";
+        public const string SdkVersion = "0.2.0";
 
         // A "T" from two boxes, as OBJ: the sample's text model.
         const string LogoObj =

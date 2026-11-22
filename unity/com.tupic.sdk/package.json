@@ -1,6 +1,6 @@
 {
   "name": "com.tupic.sdk",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "displayName": "Tupic Game SDK",
   "description": "Make a Unity game a Tupic game: sign-in, scores and analytics, regional culture data (Insights), reward stats (Chain, read-only), Live streaming, Assets, text-stored 3D models (glTF) and a WebGL build that plays on Tupic Games.",
   "unity": "6000.3",
