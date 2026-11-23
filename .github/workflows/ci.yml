@@ -1,0 +1,72 @@
+name: CI
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # The engine-agnostic core (unity/com.tupic.sdk/Runtime/Core) as the .NET library in dotnet/, and its unit tests.
+  # The Unity package itself is not built here: that needs a Unity licence.
+  dotnet:
+    name: .NET build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # Tupic.Core.Tests targets net8.0.
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - run: dotnet restore dotnet/Tupic.Core.Tests
+
+      # Tupic.Core treats warnings as errors.
+      - run: dotnet build dotnet/Tupic.Core.Tests --no-restore --configuration Release
+
+      - run: dotnet test dotnet/Tupic.Core.Tests --no-build --configuration Release
+
+  # Green Dependabot PRs merge at once, and Release to Development ships them (Release Guideline). A red one goes
+  # to Agent Smith with agent-smith-do-review, which then reviews and fixes it (Milad, 2026-11-14). Majors included.
+  dependabot-merge:
+    needs: [dotnet]
+    # Pull requests only. Both checks: a person who pushes to a Dependabot branch makes the PR theirs to merge.
+    if: >-
+      always() && github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login == 'dependabot[bot]' && github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      # GITHUB_TOKEN would do neither: its merge starts no release-development.yaml run, and it cannot pass the
+      # code-owner rule, which this App bypasses. Dependabot secrets, the only ones its runs get.
+      - name: Create a token from the Tupic Dependabot Merge App
+        id: app
+        uses: actions/create-github-app-token@v3
+        with:
+          app-id: ${{ secrets.DEPENDABOT_MERGE_APP_ID }}
+          private-key: ${{ secrets.DEPENDABOT_MERGE_APP_KEY }}
+
+      - name: Merge the tested commit
+        if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+        run: gh pr merge "$PR" --repo "$REPO" --squash --admin --match-head-commit "$SHA"
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+
+      - name: Hand the red PR to Agent Smith
+        if: contains(needs.*.result, 'failure')
+        run: gh pr edit "$PR" --repo "$REPO" --add-label agent-smith-do-review
+        env:
+          GH_TOKEN: ${{ steps.app.outputs.token }}
+          PR: ${{ github.event.pull_request.number }}
+          REPO: ${{ github.repository }}
