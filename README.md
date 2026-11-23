@@ -92,6 +92,20 @@ The SDK follows these rules from 0.1.1 (see CHANGELOG).
 The core's unit tests run with .NET 8: `dotnet test dotnet/Tupic.Core.Tests`. `tools/dotnet-test.sh` does the
 same through WSL with the Windows .NET SDK.
 
+## Releasing
+
+Follows [Releasing Libraries](https://tupic.atlassian.net/wiki/spaces/TPRD/pages/123994142).
+
+- A release is a SemVer tag `vX.Y.Z` on a green `main` commit: GitHub **Releases** → new release with the tag, or
+  `git tag vX.Y.Z <commit> && git push origin vX.Y.Z`. The pull request before bumps `version` in
+  `unity/com.tupic.sdk/package.json` and `CHANGELOG.md` to match.
+- The tag is the version; nothing is published. Games pin it in the git URL (`#vX.Y.Z`, see Install) and move to a
+  new one in a bump pull request (Dependabot does not read Unity's `Packages/manifest.json`).
+- Fixes go to `main`, then the next patch tag. Only when `main` already holds an unreleased breaking change: branch
+  `hotfix/` from the last tag, fix it, tag the patch there, and merge its pull request into `main` with a merge commit.
+  No release branches, no cherry-picks.
+- Never move or delete a published tag.
+
 ## Other engines
 
 The core is plain C#. Godot 4 (.NET) can use `Runtime/Core` with its own HTTP transport. See
