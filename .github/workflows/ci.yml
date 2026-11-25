@@ -34,8 +34,7 @@ jobs:
 
       - run: dotnet test dotnet/Tupic.Core.Tests --no-build --configuration Release
 
-  # Green Dependabot PRs merge at once, and Release to Development ships them (Release Guideline). A red one goes
-  # to Agent Smith with agent-smith-do-review, which then reviews and fixes it (Milad, 2026-11-14). Majors included.
+  # Green Dependabot PRs merge at once, majors included. A red one stays open for a person.
   dependabot-merge:
     needs: [dotnet]
     # Pull requests only. Both checks: a person who pushes to a Dependabot branch makes the PR theirs to merge.
@@ -45,8 +44,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions: {}
     steps:
-      # GITHUB_TOKEN would do neither: its merge starts no release-development.yaml run, and it cannot pass the
-      # code-owner rule, which this App bypasses. Dependabot secrets, the only ones its runs get.
+      # GITHUB_TOKEN cannot pass the code-owner rule, which this App bypasses. Dependabot secrets, the only ones
+      # its runs get.
       - name: Create a token from the Tupic Dependabot Merge App
         id: app
         uses: actions/create-github-app-token@v3
@@ -62,11 +61,3 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
           REPO: ${{ github.repository }}
           SHA: ${{ github.event.pull_request.head.sha }}
-
-      - name: Hand the red PR to Agent Smith
-        if: contains(needs.*.result, 'failure')
-        run: gh pr edit "$PR" --repo "$REPO" --add-label agent-smith-do-review
-        env:
-          GH_TOKEN: ${{ steps.app.outputs.token }}
-          PR: ${{ github.event.pull_request.number }}
-          REPO: ${{ github.repository }}

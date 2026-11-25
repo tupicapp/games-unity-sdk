@@ -94,8 +94,6 @@ same through WSL with the Windows .NET SDK.
 
 ## Releasing
 
-Follows [Releasing Libraries](https://tupic.atlassian.net/wiki/spaces/TPRD/pages/123994142).
-
 - A release is a SemVer tag `vX.Y.Z` on a green `main` commit: GitHub **Releases** → new release with the tag, or
   `git tag vX.Y.Z <commit> && git push origin vX.Y.Z`. The pull request before bumps `version` in
   `unity/com.tupic.sdk/package.json` and `CHANGELOG.md` to match.
