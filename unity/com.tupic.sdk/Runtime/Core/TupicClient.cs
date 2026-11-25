@@ -31,7 +31,7 @@ namespace Tupic.Core
             Auth = new TupicAuth(env, transport, store);
             var api = new TupicApi(transport, Auth);
             Analytics = new TupicAnalytics(env, api, gameId);
-            Games = new TupicGames(env, api, gameId, Analytics);
+            Games = new TupicGames(env, api, gameId, Analytics, Auth);
             Insights = new TupicInsights(env, api, gameId);
             Chain = new TupicChain(env, api);
             Assets = new TupicAssets(env, api, transport);

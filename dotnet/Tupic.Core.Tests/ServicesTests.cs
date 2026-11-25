@@ -24,20 +24,58 @@ public class ServicesTests
     static string Bearer(HttpRequestSpec r) => r.Headers.TryGetValue("Authorization", out var v) ? v : null;
 
     // ── Games: scores, leaderboard, analytics (mirrors game-sdk.js / analytics.js) ──
+    // games-core's score policy: a signed-in user only (the player comes from the token), one submit per session
+    // (a second is 409), session_id ^[A-Za-z0-9_.:-]{8,100}$.
     [Fact]
-    public async Task ScoreIsSubmittedToGamesCoreWithTheUserToken()
+    public async Task ScoreIsSubmittedWithTheUserTokenAndNoUsername()
     {
         var (c, t) = await Client(f => f.On("POST", Env.GamesApi + "/games/g-1/scores", 201,
-            new Dictionary<string, object> { ["id"] = "s1", ["score"] = 120, ["level"] = 3, ["rank"] = 0 }));
-        var r = await c.Games.SubmitScoreAsync(120, 3, "jane");
+            new Dictionary<string, object> { ["status"] = "ok", ["score"] = 120, ["level"] = 3 }));
+        var r = await c.Games.SubmitScoreAsync(120, 3);
         var req = t.Requests.Last();
         Assert.Equal("Bearer user-at", Bearer(req));
         var body = FakeTransport.JsonBody(req);
         Assert.Equal(120L, body["score"]);
         Assert.Equal(3L, body["level"]);
-        Assert.Equal("jane", body["username"]);
+        Assert.False(body.ContainsKey("username"));
         Assert.Equal(c.Analytics.SessionId, body["session_id"]);
-        Assert.Equal("s1", r.Str("id"));
+        Assert.Matches("^[A-Za-z0-9_.:-]{8,100}$", c.Analytics.SessionId);
+        Assert.Equal("ok", r.Str("status"));
+    }
+
+    [Fact]
+    public async Task AGuestCannotSubmitAScoreAndNothingIsSent()
+    {
+        var t = new FakeTransport().On("POST", Env.GamesApi + "/games/g-1/scores", 201);
+        var c = new TupicClient(Env, t, Game);
+        var e = await Assert.ThrowsAsync<TupicSignInRequiredException>(() => c.Games.SubmitScoreAsync(50, 1));
+        Assert.Contains("signed-in", e.Message);
+        Assert.Empty(t.Requests);
+    }
+
+    [Fact]
+    public async Task OneSubmitPerSessionAndANewSessionSubmitsAgain()
+    {
+        var (c, t) = await Client(f => f.On("POST", Env.GamesApi + "/games/g-1/scores", 201));
+        await c.Games.SubmitScoreAsync(10, 1);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => c.Games.SubmitScoreAsync(20, 1));
+        Assert.Single(t.Requests.Where(r => r.Url.EndsWith("/scores")));
+        c.Analytics.NewSession();
+        await c.Games.SubmitScoreAsync(30, 2);
+        var sent = t.Requests.Where(r => r.Url.EndsWith("/scores")).Select(FakeTransport.JsonBody).ToList();
+        Assert.Equal(2, sent.Count);
+        Assert.NotEqual(sent[0].Str("session_id"), sent[1].Str("session_id"));
+    }
+
+    [Fact]
+    public async Task AServer409MarksTheSessionAsSubmitted()
+    {
+        var (c, t) = await Client(f => f.On("POST", Env.GamesApi + "/games/g-1/scores", 409,
+            new Dictionary<string, object> { ["error"] = "This session already has a score" }));
+        var e = await Assert.ThrowsAsync<TupicApiException>(() => c.Games.SubmitScoreAsync(10, 1));
+        Assert.Equal(409, e.Status);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => c.Games.SubmitScoreAsync(10, 1));
+        Assert.Single(t.Requests.Where(r => r.Url.EndsWith("/scores")));
     }
 
     [Fact]

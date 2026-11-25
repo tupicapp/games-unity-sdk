@@ -3,6 +3,16 @@
 All notable changes to the Tupic Game SDK. The format follows Keep a Changelog, and versions follow Semantic
 Versioning (tags `vMAJOR.MINOR.PATCH`).
 
+## [0.2.0] - unreleased
+
+### Changed (breaking)
+- Scores follow Tupic Games' score rules. `SubmitScoreAsync(score, level, playTimeSeconds)` has no `username`
+  parameter (the player comes from the token). It needs a signed-in user: a guest gets
+  `TupicSignInRequiredException` and nothing is sent. Each session submits once; a second submit, or one after
+  games-core answered 409, throws `InvalidOperationException`. Start a new session (`Analytics.NewSession`,
+  `TupicGame.NewGame`) for the next run.
+- `TupicGame.EndGame` no longer sends a username, and skips the score for a guest.
+
 ## [0.1.0] - 2026-11-22
 
 First version.

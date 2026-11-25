@@ -31,7 +31,7 @@ namespace Tupic.Unity
             if (!string.IsNullOrEmpty(t)) Client.Auth.UseHostToken(t, DateTimeOffset.UtcNow.AddMinutes(4));
         }
 
-        /// <summary>Play again: new analytics session, score and level reset.</summary>
+        /// <summary>Play again: a new session (so the next run can submit its score), score and level reset.</summary>
         public async void NewGame()
         {
             Score = 0; Level = 1; ScoreChanged?.Invoke(Score);
@@ -49,11 +49,14 @@ namespace Tupic.Unity
             Level++;
         }
 
+        /// <summary>End of a run: analytics game_end, then the run's one score submit (signed-in users only).</summary>
         public async void EndGame(string reason = "gameover")
         {
             RefreshHostToken();
             await Safe(() => Client.Analytics.GameEndAsync(Score, Level, reason));
-            await Safe(() => Client.Games.SubmitScoreAsync(Score, Level, TupicHost.Get("username")));
+            // Scores belong to a signed-in user only (the name comes from the token); a guest's run is not submitted.
+            if (!Client.Auth.IsSignedIn) { Debug.Log("[Tupic] Not signed in: the score is not submitted."); return; }
+            await Safe(() => Client.Games.SubmitScoreAsync(Score, Level));
         }
 
         static async Task Safe(Func<Task> call)

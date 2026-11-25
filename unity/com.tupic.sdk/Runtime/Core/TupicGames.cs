@@ -12,27 +12,60 @@ namespace Tupic.Core
         readonly TupicApi _api;
         readonly string _gameId;
         readonly TupicAnalytics _analytics;
+        readonly TupicAuth _auth;
 
-        internal TupicGames(TupicEnvironment env, TupicApi api, string gameId, TupicAnalytics analytics)
+        internal TupicGames(TupicEnvironment env, TupicApi api, string gameId, TupicAnalytics analytics, TupicAuth auth)
         {
-            _env = env; _api = api; _gameId = gameId; _analytics = analytics;
+            _env = env; _api = api; _gameId = gameId; _analytics = analytics; _auth = auth;
         }
 
-        /// <summary>Submits a score. games-core takes the user name from the token when one is sent.</summary>
-        public Task<Dictionary<string, object>> SubmitScoreAsync(long score, int level = 1, string username = null,
-            double playTimeSeconds = 0, CancellationToken ct = default)
+        // Sessions that already submitted (or that games-core answered 409 for): games-core takes one score per session.
+        readonly HashSet<string> _submitted = new HashSet<string>();
+        static readonly System.Text.RegularExpressions.Regex SessionIdFormat =
+            new System.Text.RegularExpressions.Regex("^[A-Za-z0-9_.:-]{8,100}$");
+
+        /// <summary>
+        /// Submits the score of the current play session, once, as the signed-in user (games-core takes the player
+        /// from the token only; there is no name to send). A guest cannot submit: TupicSignInRequiredException, and
+        /// nothing is sent. A second submit in the same session throws InvalidOperationException; start a new
+        /// session (Analytics.NewSession, TupicGame.NewGame) for the next run. A 409 from games-core also ends it.
+        /// </summary>
+        public async Task<Dictionary<string, object>> SubmitScoreAsync(long score, int level = 1, double playTimeSeconds = 0,
+            CancellationToken ct = default)
         {
+            if (!_auth.IsSignedIn)
+                throw new TupicSignInRequiredException("A signed-in player is required to submit a score; sign in first (guests have no scores).");
+            var session = _analytics.SessionId;
+            if (!SessionIdFormat.IsMatch(session ?? ""))
+                throw new InvalidOperationException("The session id is not one games-core accepts (8-100 of A-Z a-z 0-9 _ . : -).");
+            if (_submitted.Contains(session))
+                throw new InvalidOperationException("This session already submitted its score; start a new session for the next run.");
             var body = new Dictionary<string, object>
             {
                 ["score"] = score,
                 ["level"] = level,
-                ["session_id"] = _analytics.SessionId,
+                ["session_id"] = session,
                 ["play_time"] = playTimeSeconds,
             };
-            if (!string.IsNullOrEmpty(username)) body["username"] = username;
-            return _api.JsonAsync("Submit score", "POST",
-                _env.GamesApi + "/games/" + Uri.EscapeDataString(_gameId) + "/scores", body, ct, optionalAuth: true);
+            try
+            {
+                var r = await _api.JsonAsync("Submit score", "POST",
+                    _env.GamesApi + "/games/" + Uri.EscapeDataString(_gameId) + "/scores", body, ct);
+                _submitted.Add(session);
+                return r;
+            }
+            catch (TupicApiException e) when (e.Status == 409)
+            {
+                _submitted.Add(session);
+                throw;
+            }
         }
+    }
+
+    /// <summary>The call needs a signed-in user (e.g. a score); nothing was sent.</summary>
+    public sealed class TupicSignInRequiredException : InvalidOperationException
+    {
+        public TupicSignInRequiredException(string message) : base(message) { }
     }
 
     public sealed class TupicAnalytics

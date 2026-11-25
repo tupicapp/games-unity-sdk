@@ -12,16 +12,16 @@ streaming, assets, 3D models stored as text (glTF), and a WebGL build that plays
 In Unity: **Window → Package Manager → + → Add package from git URL…**, then:
 
 ```
-https://github.com/tupicapp/games-unity-sdk.git?path=unity/com.tupic.sdk#v0.1.0
+https://github.com/tupicapp/games-unity-sdk.git?path=unity/com.tupic.sdk#v0.2.0
 ```
 
 Or add it to `Packages/manifest.json`:
 
 ```json
-{ "dependencies": { "com.tupic.sdk": "https://github.com/tupicapp/games-unity-sdk.git?path=unity/com.tupic.sdk#v0.1.0" } }
+{ "dependencies": { "com.tupic.sdk": "https://github.com/tupicapp/games-unity-sdk.git?path=unity/com.tupic.sdk#v0.2.0" } }
 ```
 
-Pin a tag (`#v0.1.0`). Without one you get whatever `main` is at the time.
+Pin a tag (`#v0.2.0`). Without one you get whatever `main` is at the time.
 
 ## Quick start
 
@@ -85,7 +85,9 @@ var mesh  = Tupic.Unity.TupicModelMesh.FromText(textAsset.text); // a text-store
 - Each play session submits **once**; a second submit for the same session is refused (409).
 - The session id must be 8–100 characters from `A–Z a–z 0–9 _ . : -`.
 
-The SDK follows these rules from 0.1.1 (see CHANGELOG).
+The SDK follows them: `SubmitScoreAsync` refuses a guest (`TupicSignInRequiredException`, nothing is sent) and a
+second submit in the same session; `TupicGame.NewGame()` starts the next session. 0.1.0 still sent a name and let a
+guest try; that is fixed in 0.2.0.
 
 ## Tests
 
